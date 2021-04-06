@@ -8,6 +8,6 @@ def read_scene(scene_path):
 
         return scene
 
-scene = read_scene('scenes/Room1.txt')
+scene = read_scene('scenes/Pool.txt')
 
 print('Read Scene Done!')
