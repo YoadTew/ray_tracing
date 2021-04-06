@@ -1,27 +1,13 @@
-from modules.camera import Camera
-from modules.settings import Settings
+from modules.Scene import Scene
 
 def read_scene(scene_path):
     with open(scene_path, 'r') as scene_file:
         lines = scene_file.readlines()
 
-        for line in lines:
-            if line[0] != '#' and line != '\n':
-                split_line = line.split()
+        scene = Scene(lines)
 
-                if split_line[0] == 'cam':
-                    obj = Camera(split_line[1:])
-                elif split_line[0] == 'set':
-                    obj = Settings(split_line[1:])
-                elif split_line[0] == 'mtl':
-                    pass
-                elif split_line[0] == 'pln':
-                    pass
-                elif split_line[0] == 'sph':
-                    pass
-                elif split_line[0] == 'box':
-                    pass
-                elif split_line[0] == 'lgt':
-                    pass
+        return scene
 
-read_scene('scenes/Room1.txt')
+scene = read_scene('scenes/Room1.txt')
+
+print('Read Scene Done!')
