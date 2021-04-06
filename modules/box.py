@@ -1,7 +1,8 @@
 import numpy as np
+from modules.entity import Entity
 
-class Box:
-    def __init__(self, params):
+class Box(Entity):
+    def __init__(self, params, materials):
+        super().__init__(params, materials)
         self.center = np.array(params[0:3], dtype=float)
         self.scale = float(params[3])
-        self.material_index = int(params[4])

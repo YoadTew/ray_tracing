@@ -10,4 +10,4 @@ def read_scene(scene_path):
 
 scene = read_scene('scenes/Pool.txt')
 
-print('Read Scene Done!')
+print('Done!')

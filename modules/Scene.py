@@ -28,10 +28,10 @@ class Scene:
                     material = Material(split_line[1:], len(self.materials) + 1)
                     self.materials.append(material)
                 elif split_line[0] == 'pln':
-                    self.planes.append(Plane(split_line[1:]))
+                    self.planes.append(Plane(split_line[1:], self.materials))
                 elif split_line[0] == 'sph':
-                    self.spheres.append(Sphere(split_line[1:]))
+                    self.spheres.append(Sphere(split_line[1:], self.materials))
                 elif split_line[0] == 'box':
-                    self.boxes.append(Box(split_line[1:]))
+                    self.boxes.append(Box(split_line[1:], self.materials))
                 elif split_line[0] == 'lgt':
                     self.lights.append(Light(split_line[1:]))
