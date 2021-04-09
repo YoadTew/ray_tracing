@@ -60,11 +60,20 @@ def main():
     s_width = scene.camera.screen_width
     s_height = (args.img_height / args.img_width) * s_width
 
+    # Screen corner and moving pixel vectors
     P_0 = s_center - (s_width / 2) * Vx - (s_height / 2) * Vy
+    move_x = (Vx * s_width) / args.img_width
+    move_y = (Vy * s_height) / args.img_height
 
-    for index_y in range(args.img_height):
-        for index_x in range(args.img_width):
-            img[index_y, index_x] = (index_x + index_y)
+    for i in range(args.img_height):
+        p = np.copy(P_0)  # Current pixel location
+        for j in range(args.img_width):
+            ray = None
+
+            p += move_x
+        P_0 += move_y
+
+
 
     save_img(img, args.img_path)
 
