@@ -1,9 +1,12 @@
-from modules.Scene import Scene
 import argparse
 import os
 import time
 import numpy as np
 from PIL import Image
+
+from modules.Scene import Scene
+from modules.ray import Ray
+from utils import normalize
 
 def read_args():
     parser = argparse.ArgumentParser(description='Ray tracer running script')
@@ -30,9 +33,10 @@ def save_img(img, img_path):
     PIL_img = Image.fromarray(img)
     PIL_img.save(img_path)
 
-def calc_screen_vectors(scene):
-    Vz = scene.camera.look_at - scene.camera.position
-    Vz = Vz / np.linalg.norm(Vz)
+    print('Image saved!')
+
+def calc_screen_vectors_old(scene):
+    Vz = normalize(scene.camera.look_at - scene.camera.position)
     a, b, c = Vz
 
     Sx = -b
@@ -46,11 +50,31 @@ def calc_screen_vectors(scene):
 
     return Vx, Vy, Vz
 
+def calc_screen_vectors(scene):
+    Vz = normalize(scene.camera.look_at - scene.camera.position)
+    Vx = normalize(np.cross(scene.camera.up_vector, Vz))
+    Vy = normalize(np.cross(Vx, Vz))
+
+    return Vx, Vy, Vz
+
+def find_intersection(scene, ray):
+    min_t = np.inf
+    nearest_object = None
+
+    for sphere in scene.spheres:
+        t = sphere.intersection(ray)
+
+        if t and t < min_t:
+            min_t = t
+            nearest_object = sphere
+
+    return t, nearest_object
+
 def main():
     args = read_args()
     scene = read_scene(args.scene_path)
 
-    img = np.zeros((args.img_height, args.img_width), dtype=np.uint8)
+    img = np.zeros((args.img_height, args.img_width, 3), dtype=np.uint8)
 
     # Calculate normalize screen vectors
     Vx, Vy, Vz = calc_screen_vectors(scene)
@@ -66,14 +90,16 @@ def main():
     move_y = (Vy * s_height) / args.img_height
 
     for i in range(args.img_height):
-        p = np.copy(P_0)  # Current pixel location
+        pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
-            ray = None
+            ray = Ray(scene.camera.position, pixel)
+            t, nearest_object = find_intersection(scene, ray)
 
-            p += move_x
+            if nearest_object:
+                img[i, j] = nearest_object.material.diffuse_color * 255.
+
+            pixel += move_x
         P_0 += move_y
-
-
 
     save_img(img, args.img_path)
 
