@@ -89,6 +89,7 @@ def main():
     move_x = (Vx * s_width) / args.img_width
     move_y = (Vy * s_height) / args.img_height
 
+    start = time.time()
     for i in range(args.img_height):
         pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
@@ -97,9 +98,14 @@ def main():
 
             if nearest_object:
                 img[i, j] = nearest_object.material.diffuse_color * 255.
+            else:
+                img[i, j] = 0 #scene.settings.background_color * 255.
 
             pixel += move_x
         P_0 += move_y
+    end = time.time()
+
+    print(f'Render took {end - start} seconds')
 
     save_img(img, args.img_path)
 
