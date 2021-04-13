@@ -29,21 +29,26 @@ class Sphere(Entity):
         for light in scene.lights[:]:
             ray = Ray(light.position, inter_point)
             t, near_object = find_intersection(scene, ray)
+            need_shadow = abs(t - np.linalg.norm(inter_point - light.position)) > 1e-6
 
-            # Diffuse color
+            ####### Diffuse color #######
             curr_diff_color = abs(normal @ ray.direction) * self.material.diffuse_color * light.light_color
 
             # If this is not the first object we meet
-            if abs(t - np.linalg.norm(inter_point - light.position)) > 1e-6:
+            if need_shadow:
                 curr_diff_color *= (1 - light.shadow_intensity)
 
             diff_color += curr_diff_color
 
-            # Specular color
+            ####### Specular color #######
             R = 2 * (ray.direction @ normal) * normal - ray.direction
             curr_specular_color = self.material.specular_color * \
                                   ((R @ -camera_ray.direction) ** self.material.phong_specularity_coefficient) * \
                                   light.light_color * light.specular_intensity
+
+            # If this is not the first object we meet
+            if need_shadow:
+                curr_specular_color *= (1 - light.shadow_intensity)
 
             specular_color += curr_specular_color
 

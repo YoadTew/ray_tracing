@@ -17,7 +17,7 @@ class Scene:
         self.lights = []
 
         for line in lines:
-            if line[0] != '#' and line != '\n':
+            if line[0] != '#' and not line.isspace():
                 split_line = line.split()
 
                 if split_line[0] == 'cam':
