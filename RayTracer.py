@@ -61,7 +61,7 @@ def calc_screen_vectors(scene):
 def find_color(scene, p_object, ray, t):
     inter_point = ray.get_point(t)
 
-    diffuse_color = p_object.get_diffuse_color(scene, inter_point)
+    diffuse_color = p_object.get_diffuse_specular_color(scene, inter_point, ray)
 
     color = diffuse_color
     color = np.clip(color, 0, 1) * 255

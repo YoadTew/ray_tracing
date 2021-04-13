@@ -21,20 +21,30 @@ class Sphere(Entity):
                 return min(t1, t2)
         return None
 
-    def get_diffuse_color(self, scene, inter_point):
+    def get_diffuse_specular_color(self, scene, inter_point, camera_ray):
         normal = normalize(inter_point - self.center)
         diff_color = np.zeros(3, dtype=float)
+        specular_color = np.zeros(3, dtype=float)
 
         for light in scene.lights[:]:
             ray = Ray(light.position, inter_point)
             t, near_object = find_intersection(scene, ray)
 
-            curr_color = abs(normal @ ray.direction) * self.material.diffuse_color * light.light_color
+            # Diffuse color
+            curr_diff_color = abs(normal @ ray.direction) * self.material.diffuse_color * light.light_color
 
             # If this is not the first object we meet
             if abs(t - np.linalg.norm(inter_point - light.position)) > 1e-6:
-                curr_color *= (1 - light.shadow_intensity)
+                curr_diff_color *= (1 - light.shadow_intensity)
 
-            diff_color += curr_color
+            diff_color += curr_diff_color
 
-        return diff_color
+            # Specular color
+            R = 2 * (ray.direction @ normal) * normal - ray.direction
+            curr_specular_color = self.material.specular_color * \
+                                  ((R @ -camera_ray.direction) ** self.material.phong_specularity_coefficient) * \
+                                  light.light_color * light.specular_intensity
+
+            specular_color += curr_specular_color
+
+        return diff_color + specular_color

@@ -8,5 +8,5 @@ class Entity:
     def intersection(self, ray):
         return None
 
-    def get_diffuse_color(self, scene, inter_point):
+    def get_diffuse_specular_color(self, scene, inter_point, camera_ray):
         return None
