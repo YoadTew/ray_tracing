@@ -1,5 +1,7 @@
 import numpy as np
 from modules.entity import Entity
+from modules.ray import Ray
+from utils import normalize, find_intersection
 
 class Plane(Entity):
     def __init__(self, params, materials):

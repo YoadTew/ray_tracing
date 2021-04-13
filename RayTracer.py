@@ -4,9 +4,10 @@ import time
 import numpy as np
 from PIL import Image
 
+import modules.sphere
 from modules.Scene import Scene
 from modules.ray import Ray
-from utils import normalize
+from utils import normalize, find_intersection
 
 def read_args():
     parser = argparse.ArgumentParser(description='Ray tracer running script')
@@ -57,18 +58,16 @@ def calc_screen_vectors(scene):
 
     return Vx, Vy, Vz
 
-def find_intersection(scene, ray):
-    min_t = np.inf
-    nearest_object = None
+def find_color(scene, p_object, ray, t):
+    inter_point = ray.get_point(t)
 
-    for sphere in scene.spheres:
-        t = sphere.intersection(ray)
+    diffuse_color = p_object.get_diffuse_color(scene, inter_point)
 
-        if t and t < min_t:
-            min_t = t
-            nearest_object = sphere
+    color = diffuse_color
+    color = np.clip(color, 0, 1) * 255
 
-    return t, nearest_object
+    return color
+
 
 def main():
     args = read_args()
@@ -97,9 +96,9 @@ def main():
             t, nearest_object = find_intersection(scene, ray)
 
             if nearest_object:
-                img[i, j] = nearest_object.material.diffuse_color * 255.
+                img[i, j] = find_color(scene, nearest_object, ray, t)
             else:
-                img[i, j] = 0 #scene.settings.background_color * 255.
+                img[i, j] = 0
 
             pixel += move_x
         P_0 += move_y
