@@ -2,7 +2,7 @@ import numpy as np
 from modules.entity import Entity
 from modules.ray import Ray
 
-from utils import normalize, find_intersection
+from utils import normalize, find_intersection, is_shadowed
 
 class Sphere(Entity):
     def __init__(self, params, materials):
@@ -27,14 +27,11 @@ class Sphere(Entity):
         specular_color = np.zeros(3, dtype=float)
 
         for light in scene.lights[:]:
-            ray = Ray(light.position, inter_point)
-            t, near_object = find_intersection(scene, ray)
-            need_shadow = abs(t - np.linalg.norm(inter_point - light.position)) > 1e-6
+            need_shadow, ray = is_shadowed(light, inter_point, scene)
 
             ####### Diffuse color #######
             curr_diff_color = abs(normal @ ray.direction) * self.material.diffuse_color * light.light_color
 
-            # If this is not the first object we meet
             if need_shadow:
                 curr_diff_color *= (1 - light.shadow_intensity)
 
@@ -46,7 +43,6 @@ class Sphere(Entity):
                                   ((R @ -camera_ray.direction) ** self.material.phong_specularity_coefficient) * \
                                   light.light_color * light.specular_intensity
 
-            # If this is not the first object we meet
             if need_shadow:
                 curr_specular_color *= (1 - light.shadow_intensity)
 

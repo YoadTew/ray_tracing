@@ -15,8 +15,8 @@ def read_args():
     parser.add_argument('scene_path', help='path to scene file')
     parser.add_argument('img_path', help='path to save image')
 
-    parser.add_argument('img_width', default=500, nargs='?', type=float, help='Image width (default: 500)')
-    parser.add_argument('img_height', default=500, nargs='?', type=float, help='Image height (default: 500)')
+    parser.add_argument('img_width', default=500, nargs='?', type=int, help='Image width (default: 500)')
+    parser.add_argument('img_height', default=500, nargs='?', type=int, help='Image height (default: 500)')
 
     args = parser.parse_args()
 
@@ -88,11 +88,14 @@ def main():
     move_x = (Vx * s_width) / args.img_width
     move_y = (Vy * s_height) / args.img_height
 
+    a = b = 0
+
     start = time.time()
     for i in range(args.img_height):
         pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
             ray = Ray(scene.camera.position, pixel)
+
             t, nearest_object = find_intersection(scene, ray)
 
             if nearest_object:
