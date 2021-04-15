@@ -6,9 +6,8 @@ def normalize(vector):
 def find_intersection(scene, ray, stop_at_first=False):
     min_t = np.inf
     nearest_object = None
-    objects = scene.planes + scene.spheres
 
-    for idx, entity in enumerate(objects):
+    for entity in scene.spheres + scene.planes:
         t = entity.intersection(ray)
 
         if t and t < min_t:
@@ -16,7 +15,6 @@ def find_intersection(scene, ray, stop_at_first=False):
             nearest_object = entity
 
             if stop_at_first:
-                # print(f'{idx} / {len(objects)}')
                 break
 
     return min_t, nearest_object
