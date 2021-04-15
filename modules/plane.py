@@ -1,7 +1,7 @@
 import numpy as np
 from modules.entity import Entity
 from modules.ray import Ray
-from utils import normalize, find_intersection,is_shadowed
+from utils import normalize, find_intersection, is_soft_shadowed
 
 class Plane(Entity):
     def __init__(self, params, materials):

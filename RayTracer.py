@@ -36,21 +36,6 @@ def save_img(img, img_path):
 
     print('Image saved!')
 
-def calc_screen_vectors_old(scene):
-    Vz = normalize(scene.camera.look_at - scene.camera.position)
-    a, b, c = Vz
-
-    Sx = -b
-    Cx = np.sqrt(1 - Sx ** 2)
-    Sy = -a / Cx
-    Cy = c / Cx
-
-    M = np.matrix([[Cy, 0, Sy], [-Sx * Sy, Cx, Sx * Cy], [-Cx * Sy, -Sx, Cx * Cy]])
-    Vx = np.matmul(M, [1, 0, 0])
-    Vy = np.matmul(M, [0, 1, 0])
-
-    return Vx, Vy, Vz
-
 def calc_screen_vectors(scene):
     Vz = normalize(scene.camera.look_at - scene.camera.position)
     Vx = normalize(np.cross(scene.camera.up_vector, Vz))
@@ -61,9 +46,7 @@ def calc_screen_vectors(scene):
 def find_color(scene, p_object, ray, t):
     inter_point = ray.get_point(t)
 
-    diffuse_color = p_object.get_diffuse_specular_color(scene, inter_point, ray)
-
-    color = diffuse_color
+    color = p_object.get_diffuse_specular_color(scene, inter_point, ray)
     color = np.clip(color, 0, 1) * 255
 
     return color
@@ -88,10 +71,9 @@ def main():
     move_x = (Vx * s_width) / args.img_width
     move_y = (Vy * s_height) / args.img_height
 
-    a = b = 0
-
     start = time.time()
     for i in range(args.img_height):
+        print(f'Row {i}, Second passed: {time.time() - start}')
         pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
             ray = Ray(scene.camera.position, pixel)
