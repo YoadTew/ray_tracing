@@ -6,8 +6,7 @@ from PIL import Image
 
 import modules.sphere
 from modules.Scene import Scene
-from modules.ray import Ray
-from utils import normalize, find_intersection
+from utils import normalize, find_intersection, find_color
 
 def read_args():
     parser = argparse.ArgumentParser(description='Ray tracer running script')
@@ -43,15 +42,6 @@ def calc_screen_vectors(scene):
 
     return Vx, Vy, Vz
 
-def find_color(scene, p_object, ray, t):
-    inter_point = ray.get_point(t)
-
-    color = p_object.get_diffuse_specular_color(scene, inter_point, ray)
-    color = np.clip(color, 0, 1) * 255
-
-    return color
-
-
 def main():
     args = read_args()
     scene = read_scene(args.scene_path)
@@ -71,25 +61,28 @@ def main():
     move_x = (Vx * s_width) / args.img_width
     move_y = (Vy * s_height) / args.img_height
 
+    camera_ray_origins = np.zeros((args.img_height, args.img_width, 3), dtype=float)
+    camera_ray_directions = np.zeros((args.img_height, args.img_width, 3), dtype=float)
+
     start = time.time()
     for i in range(args.img_height):
         print(f'Row {i}, Second passed: {time.time() - start}')
         pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
-            ray = Ray(scene.camera.position, pixel)
-
-            t, nearest_object = find_intersection(scene, ray)
-
-            if nearest_object:
-                img[i, j] = find_color(scene, nearest_object, ray, t)
-            else:
-                img[i, j] = 0
+            camera_ray_origins[i, j] = scene.camera.position
+            camera_ray_directions[i, j] = normalize(pixel - scene.camera.position)
 
             pixel += move_x
         P_0 += move_y
-    end = time.time()
 
-    print(f'Render took {end - start} seconds')
+    camera_ray_origins = camera_ray_origins.reshape(-1, 3)
+    camera_ray_directions = camera_ray_directions.reshape(-1, 3)
+
+    t, nearest_objects = find_intersection(scene, camera_ray_origins, camera_ray_directions)
+
+    img = find_color(scene, t, nearest_objects, camera_ray_origins, camera_ray_directions, args.img_height, args.img_width)
+
+    print(f'Render took {time.time() - start} seconds')
 
     save_img(img, args.img_path)
 
