@@ -7,7 +7,7 @@ def find_intersection(scene, ray, stop_at_first=False):
     min_t = np.inf
     nearest_object = None
 
-    for entity in scene.spheres + scene.planes:
+    for entity in scene.planes + scene.spheres:
         t = entity.intersection(ray)
 
         if t and t < min_t:
@@ -19,7 +19,7 @@ def find_intersection(scene, ray, stop_at_first=False):
 
     return min_t, nearest_object
 
-def is_soft_shadowed(light, inter_point, scene):
+def is_soft_shadowed(light, inter_point, scene, normal):
     from modules.ray import Ray
     ray = Ray(light.position, inter_point)
 
@@ -39,7 +39,7 @@ def is_soft_shadowed(light, inter_point, scene):
     for i in range(scene.settings.soft_shadow_N):
         point = np.copy(P_0)
         for j in range(scene.settings.soft_shadow_N):
-            if not is_shadowed(point, inter_point, scene):
+            if not is_shadowed(point, inter_point, scene, normal):
                 rays_hit += 1
 
             point += move_x
@@ -49,15 +49,15 @@ def is_soft_shadowed(light, inter_point, scene):
 
     return percent_hit, ray
 
-def is_shadowed(light_position, inter_point, scene):
+def is_shadowed(light_position, inter_point, scene, normal):
     from modules.ray import Ray
 
-    # ray = Ray(inter_point + (self.normal * 1e-4), light.position)
-    # t, near_object = find_intersection(scene, ray)
-    # need_shadow = near_object is not None
+    ray = Ray(inter_point + (normal * 1e-3), light_position)
+    t, near_object = find_intersection(scene, ray)
+    need_shadow = (near_object is not None) and t < np.linalg.norm(light_position - inter_point)
 
-    ray = Ray(light_position, inter_point)
-    t, near_object = find_intersection(scene, ray, stop_at_first=True)
-    need_shadow = abs(t - np.linalg.norm(inter_point - light_position)) > 1e-6
+    # ray = Ray(light_position, inter_point)
+    # t, near_object = find_intersection(scene, ray, stop_at_first=False)
+    # need_shadow = abs(t - np.linalg.norm(inter_point - light_position)) > 1e-6
 
     return need_shadow

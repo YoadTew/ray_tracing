@@ -2,7 +2,7 @@ import numpy as np
 from modules.entity import Entity
 from modules.ray import Ray
 
-from utils import normalize, find_intersection, is_soft_shadowed
+from utils import normalize, is_soft_shadowed
 
 class Sphere(Entity):
     def __init__(self, params, materials):
@@ -44,13 +44,13 @@ class Sphere(Entity):
         specular_color = np.zeros(3, dtype=float)
 
         for light in scene.lights[:]:
-            shadow_percent, ray = is_soft_shadowed(light, inter_point, scene)
+            light_ray_hits, ray = is_soft_shadowed(light, inter_point, scene, normal)
 
             ####### Diffuse color #######
             curr_diff_color = abs(normal @ ray.direction) * self.material.diffuse_color * light.light_color
 
             # if need_shadow:
-            curr_diff_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * shadow_percent)
+            curr_diff_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * light_ray_hits)
 
             diff_color += curr_diff_color
 
@@ -61,7 +61,7 @@ class Sphere(Entity):
                                   light.light_color * light.specular_intensity
 
             # if need_shadow:
-            curr_specular_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * shadow_percent)
+            curr_specular_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * light_ray_hits)
 
             specular_color += curr_specular_color
 
