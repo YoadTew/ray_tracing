@@ -27,10 +27,7 @@ class Sphere(Entity):
 
         return np.minimum(t_ca - t_hc, t_ca + t_hc), mask_inter
 
-    def get_diffuse_specular_color(self, scene, inter_point, camera_ray_direction):
-        normal = normalize(inter_point - self.center)
+    def get_normal(self, point):
+        normal = normalize(point - self.center)
 
-        color = calc_diffuse_specular_color(scene, inter_point, camera_ray_direction, normal,
-                                            self.material.diffuse_color, self.material.specular_color,
-                                            self.material.phong_specularity_coefficient)
-        return color
+        return normal

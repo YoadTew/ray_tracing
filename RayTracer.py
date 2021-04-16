@@ -66,7 +66,6 @@ def main():
 
     start = time.time()
     for i in range(args.img_height):
-        print(f'Row {i}, Second passed: {time.time() - start}')
         pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
             camera_ray_origins[i, j] = scene.camera.position
@@ -87,4 +86,6 @@ def main():
     save_img(img, args.img_path)
 
 if __name__ == '__main__':
+    np.random.seed(0)
+
     main()

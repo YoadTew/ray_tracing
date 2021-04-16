@@ -1,7 +1,6 @@
 import numpy as np
 from modules.entity import Entity
 from modules.ray import Ray
-from utils import normalize, calc_diffuse_specular_color
 
 class Plane(Entity):
     def __init__(self, params, materials):
@@ -18,9 +17,5 @@ class Plane(Entity):
 
         return t, mask_inter
 
-    def get_diffuse_specular_color(self, scene, inter_point, camera_ray_direction):
-        color = calc_diffuse_specular_color(scene, inter_point, camera_ray_direction, self.normal,
-                                            self.material.diffuse_color, self.material.specular_color,
-                                            self.material.phong_specularity_coefficient)
-
-        return color
+    def get_normal(self, point):
+        return self.normal
