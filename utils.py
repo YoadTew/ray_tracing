@@ -28,19 +28,35 @@ def render_img(scene, camera_ray_origins, camera_ray_directions):
 
     return img
 
-def find_intersection(scene, ray_origins, ray_directions):
-    min_t = np.full(ray_origins.shape[0], np.inf, dtype=float)
-    nearest_objects = np.full(ray_origins.shape[0], -1, dtype=int)
+def find_intersection(scene, ray_origins, ray_directions, find_all=False):
+    if find_all:
+        all_t = np.full((ray_origins.shape[0], len(scene.objects)), np.inf, dtype=float)
+        all_objects = np.full((ray_origins.shape[0], len(scene.objects)), -1, dtype=int)
 
-    for idx, entity in enumerate(scene.objects):
-        t, mask_inter = entity.intersection(ray_origins, ray_directions)
+        for idx, entity in enumerate(scene.objects):
+            t, mask_inter = entity.intersection(ray_origins, ray_directions)
+            all_t[:, idx][mask_inter] = t[mask_inter]
+            all_objects[:, idx][mask_inter] = idx
 
-        new_t = np.copy(min_t)
-        new_t[mask_inter] = np.minimum(new_t[mask_inter], t[mask_inter])
-        changes = (new_t != min_t)
+        sort_idx = np.argsort(all_t, 1)
+        all_t = np.take_along_axis(all_t, sort_idx, axis=1)
+        all_objects = np.take_along_axis(all_objects, sort_idx, axis=1)
 
-        nearest_objects[changes] = idx
-        min_t = new_t
+        min_t = all_t[:, :2]
+        nearest_objects = all_objects[:, :2]
+    else:
+        min_t = np.full(ray_origins.shape[0], np.inf, dtype=float)
+        nearest_objects = np.full(ray_origins.shape[0], -1, dtype=int)
+
+        for idx, entity in enumerate(scene.objects):
+            t, mask_inter = entity.intersection(ray_origins, ray_directions)
+
+            new_t = np.copy(min_t)
+            new_t[mask_inter] = np.minimum(new_t[mask_inter], t[mask_inter])
+            changes = (new_t != min_t)
+
+            nearest_objects[changes] = idx
+            min_t = new_t
 
     return min_t, nearest_objects
 
