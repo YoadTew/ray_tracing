@@ -6,7 +6,7 @@ from PIL import Image
 
 import modules.sphere
 from modules.Scene import Scene
-from utils import normalize, find_intersection, find_color
+from utils import normalize, render_img
 
 def read_args():
     parser = argparse.ArgumentParser(description='Ray tracer running script')
@@ -46,8 +46,6 @@ def main():
     args = read_args()
     scene = read_scene(args.scene_path)
 
-    img = np.zeros((args.img_height, args.img_width, 3), dtype=np.uint8)
-
     # Calculate normalize screen vectors
     Vx, Vy, Vz = calc_screen_vectors(scene)
 
@@ -77,9 +75,8 @@ def main():
     camera_ray_origins = camera_ray_origins.reshape(-1, 3)
     camera_ray_directions = camera_ray_directions.reshape(-1, 3)
 
-    t, nearest_objects = find_intersection(scene, camera_ray_origins, camera_ray_directions)
-
-    img = find_color(scene, t, nearest_objects, camera_ray_origins, camera_ray_directions, args.img_height, args.img_width)
+    img = render_img(scene, camera_ray_origins, camera_ray_directions)
+    img = img.reshape(args.img_height, args.img_width, 3)
 
     print(f'Render took {time.time() - start} seconds')
 

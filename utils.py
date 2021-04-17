@@ -12,6 +12,22 @@ def normalize(vector):
 def vector_dot(vec1, vec2):
     return np.sum(vec1 * vec2, axis=-1, keepdims=True)
 
+def render_img(scene, camera_ray_origins, camera_ray_directions):
+    img = np.full((camera_ray_origins.shape[0], 3), scene.settings.background_color, dtype=float)
+
+    t, nearest_objects = find_intersection(scene, camera_ray_origins, camera_ray_directions)
+    mask_inter = nearest_objects >= 0
+    img[mask_inter] = find_color(scene,
+                                 t[mask_inter],
+                                 nearest_objects[mask_inter],
+                                 camera_ray_origins[mask_inter],
+                                 camera_ray_directions[mask_inter])
+
+    img = np.clip(img, 0, 1) * 255.
+    img = img.astype(np.uint8)
+
+    return img
+
 def find_intersection(scene, ray_origins, ray_directions):
     min_t = np.full(ray_origins.shape[0], np.inf, dtype=float)
     nearest_objects = np.full(ray_origins.shape[0], -1, dtype=int)
@@ -28,74 +44,89 @@ def find_intersection(scene, ray_origins, ray_directions):
 
     return min_t, nearest_objects
 
-def find_color(scene, t, nearest_objects, camera_ray_origins, camera_ray_directions, img_height, img_width):
-    inter_points = camera_ray_origins + np.expand_dims(t, 1) * camera_ray_directions
-    mask_inter = nearest_objects >= 0
-    normals = np.empty((camera_ray_origins.shape[0], 3), dtype=float)
-    diff_colors = np.empty((camera_ray_origins.shape[0], 3), dtype=float)
-    spec_colors = np.empty((camera_ray_origins.shape[0], 3), dtype=float)
-    phong_coeffs = np.empty((camera_ray_origins.shape[0]), dtype=float)
+def find_color(scene, t, nearest_objects, source_ray_origins, source_ray_directions, recursion_count=1):
+    """
+    :param source_ray_origins: All the rays starting points (originally the camera)
+    :param source_ray_directions: All the rays directions (originally the intersection point)
+    """
+    inter_points = source_ray_origins + np.expand_dims(t, 1) * source_ray_directions
+    normals = np.empty((source_ray_origins.shape[0], 3), dtype=float)
+    diff_colors = np.empty((source_ray_origins.shape[0], 3), dtype=float)
+    spec_colors = np.empty((source_ray_origins.shape[0], 3), dtype=float)
+    phong_coeffs = np.empty((source_ray_origins.shape[0]), dtype=float)
+    reflect_colors = np.empty((source_ray_origins.shape[0], 3), dtype=float)
 
     for i in range(normals.shape[0]):
         object_idx = nearest_objects[i]
-        if object_idx >= 0:
-            normals[i] = scene.objects[object_idx].get_normal(inter_points[i])
-            diff_colors[i] = scene.objects[object_idx].material.diffuse_color
-            spec_colors[i] = scene.objects[object_idx].material.specular_color
-            phong_coeffs[i] = scene.objects[object_idx].material.phong_specularity_coefficient
+        # if object_idx >= 0:
+        normals[i] = scene.objects[object_idx].get_normal(inter_points[i])
+        diff_colors[i] = scene.objects[object_idx].material.diffuse_color
+        spec_colors[i] = scene.objects[object_idx].material.specular_color
+        phong_coeffs[i] = scene.objects[object_idx].material.phong_specularity_coefficient
+        reflect_colors[i] = scene.objects[object_idx].material.reflection_color
 
-    colors = calc_diffuse_specular_color(scene,
+    diff_spec_colors = calc_diffuse_specular_color(scene,
                                          inter_points,
-                                         camera_ray_directions,
+                                         source_ray_directions,
                                          normals,
                                          diff_colors,
                                          spec_colors,
-                                         phong_coeffs,
-                                         mask_inter)
+                                         phong_coeffs)
 
-    return colors.reshape(img_height, img_width, 3)
+    reflection_colors = np.full_like(diff_spec_colors, scene.settings.background_color, dtype=float)
 
-def calc_diffuse_specular_color(scene, inter_points, camera_ray_directions, normals, p_diff_colors, p_spec_colors, p_phong_coeffs, mask_inter):
-    colors = np.full_like(p_diff_colors, scene.settings.background_color, dtype=float)
-    diff_colors = np.zeros_like(p_diff_colors, dtype=float)
-    specular_colors = np.zeros_like(p_spec_colors, dtype=float)
+    if recursion_count < scene.settings.max_recursion:
+        # ref_directions = 2 * vector_dot(source_ray_directions, normals) * normals - source_ray_directions
+        ref_directions = source_ray_directions - 2 * vector_dot(source_ray_directions, normals) * normals
+        ref_t, ref_nearest_objects = find_intersection(scene, inter_points, ref_directions)
+        mask_ref_inter = ref_nearest_objects >= 0
 
-    for light in scene.lights[:]:
-        light_ray_hits = is_soft_shadowed(light, inter_points, scene, normals, mask_inter)#np.ones(normals.shape[0], dtype=float)
-        ray_directions = np.empty_like(inter_points, float)
-        ray_directions[mask_inter] = normalize(inter_points[mask_inter] - light.position)
+        if mask_ref_inter.any():
+            reflection_colors[mask_ref_inter] = find_color(scene,
+                                                           ref_t[mask_ref_inter],
+                                                           ref_nearest_objects[mask_ref_inter],
+                                                           inter_points[mask_ref_inter],
+                                                           ref_directions[mask_ref_inter],
+                                                           recursion_count + 1)
+    reflection_colors *= reflect_colors
 
-        ####### Diffuse color #######
-        curr_diff_color = np.zeros_like(diff_colors, dtype=float)
-        curr_diff_color[mask_inter] = \
-            np.abs(vector_dot(normals[mask_inter], ray_directions[mask_inter])) * \
-            p_diff_colors[mask_inter] * light.light_color
-
-        curr_diff_color[mask_inter] *= ((1 - light.shadow_intensity) + light.shadow_intensity * np.expand_dims(light_ray_hits[mask_inter], -1))
-
-        diff_colors[mask_inter] += curr_diff_color[mask_inter]
-
-        ####### Specular color #######
-        curr_specular_color = np.zeros_like(specular_colors, dtype=float)
-        R = 2 * vector_dot(ray_directions[mask_inter], normals[mask_inter]) * normals[mask_inter] - ray_directions[mask_inter]
-
-        a = p_spec_colors[mask_inter]
-        b = np.power(vector_dot(R,-camera_ray_directions[mask_inter]), np.expand_dims(p_phong_coeffs[mask_inter], -1))
-        c = light.light_color * light.specular_intensity
-        curr_specular_color[mask_inter] = a * b * c
-
-        curr_specular_color[mask_inter] *= ((1 - light.shadow_intensity) + light.shadow_intensity * np.expand_dims(light_ray_hits[mask_inter], -1))
-
-        specular_colors[mask_inter] += curr_specular_color[mask_inter]
-
-    colors[mask_inter] = diff_colors[mask_inter] + specular_colors[mask_inter]
-    colors = np.clip(colors, 0, 1) * 255.
-    colors = colors.astype(np.uint8)
+    colors = diff_spec_colors + reflection_colors
 
     return colors
 
-def is_soft_shadowed(light, inter_points, scene, normals, mask_inter):
-    ray_directions = normalize(inter_points[mask_inter] - light.position)
+def calc_diffuse_specular_color(scene, inter_points, source_ray_directions, normals, p_diff_colors, p_spec_colors, p_phong_coeffs):
+    diff_colors = np.zeros_like(p_diff_colors, dtype=float)
+    specular_colors = np.zeros_like(p_spec_colors, dtype=float)
+
+    for light in scene.lights:
+        light_ray_hits = is_soft_shadowed(light, inter_points, scene, normals)
+        light_ray_directions = normalize(inter_points - light.position)
+
+        ####### Diffuse color #######
+        curr_diff_color = \
+            np.abs(vector_dot(normals, light_ray_directions)) * \
+            p_diff_colors * light.light_color
+
+        curr_diff_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * np.expand_dims(light_ray_hits, -1))
+
+        diff_colors += curr_diff_color
+
+        ####### Specular color #######
+        R = 2 * vector_dot(light_ray_directions, normals) * normals- light_ray_directions
+
+        s1 = p_spec_colors
+        s2 = np.power(vector_dot(R, -source_ray_directions), np.expand_dims(p_phong_coeffs, -1))
+        s3 = light.light_color * light.specular_intensity
+        curr_specular_color = s1 * s2 * s3
+
+        curr_specular_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * np.expand_dims(light_ray_hits, -1))
+
+        specular_colors += curr_specular_color
+
+    return diff_colors + specular_colors
+
+def is_soft_shadowed(light, inter_points, scene, normals):
+    ray_directions = normalize(inter_points - light.position)
     ray_hits = np.zeros(inter_points.shape[0], int)
 
     Vz = ray_directions
@@ -118,9 +149,9 @@ def is_soft_shadowed(light, inter_points, scene, normals, mask_inter):
         point = np.copy(P_0)
         for j in range(scene.settings.soft_shadow_N):
             idx = i * scene.settings.soft_shadow_N + j
-            ray_origins[:, idx] = inter_points[mask_inter] + (normals[mask_inter] * 1e-3)
+            ray_origins[:, idx] = inter_points + (normals * 1e-3)
             rand_point = point + np.random.uniform() * move_y + np.random.uniform() * move_x
-            ray_directions[:, idx] = normalize(rand_point - inter_points[mask_inter] + (normals[mask_inter] * 1e-3))
+            ray_directions[:, idx] = normalize(rand_point - inter_points + (normals * 1e-3))
 
             point += move_x
         P_0 += move_y
@@ -129,10 +160,10 @@ def is_soft_shadowed(light, inter_points, scene, normals, mask_inter):
     t = t.reshape(ray_directions.shape[0], N_squared)
     nearest_objects = nearest_objects.reshape(ray_directions.shape[0], N_squared)
 
-    ray_hits[mask_inter] = N_squared - \
+    ray_hits = N_squared - \
                            np.sum(
                                np.logical_and(
-                                   t < np.expand_dims(np.linalg.norm(light.position - inter_points[mask_inter], axis=-1), -1),
+                                   t < np.expand_dims(np.linalg.norm(light.position - inter_points, axis=-1), -1),
                                    (nearest_objects >= 0)
                                ), axis=-1
                            )

@@ -2,7 +2,7 @@ import numpy as np
 from modules.entity import Entity
 from modules.ray import Ray
 
-from utils import normalize, calc_diffuse_specular_color
+from utils import normalize
 
 class Sphere(Entity):
     def __init__(self, params, materials):
