@@ -62,12 +62,36 @@ def main():
     camera_ray_origins = np.zeros((args.img_height, args.img_width, 3), dtype=float)
     camera_ray_directions = np.zeros((args.img_height, args.img_width, 3), dtype=float)
 
+    mask = np.full((args.img_height, args.img_width), False, dtype=bool)
+
     start = time.time()
     for i in range(args.img_height):
         pixel = np.copy(P_0)  # Current pixel location
         for j in range(args.img_width):
             camera_ray_origins[i, j] = scene.camera.position
-            camera_ray_directions[i, j] = normalize(pixel - scene.camera.position)
+
+            if scene.camera.fisheye:
+                k = scene.camera.fisheye_k
+                f = scene.camera.screen_distance
+
+                R_f = np.linalg.norm(pixel - s_center)
+
+                if 0 < k <= 1:
+                    theta_p = np.arctan((k * R_f) / f) / k
+                elif k == 0:
+                    theta_p = R_f / f
+                elif -1 <= k < 0:
+                    theta_p = np.arcsin((k * R_f) / f) / k
+
+                R_p = f * np.tan(theta_p)
+
+                if R_p < 0:
+                    mask[i, j] = True
+
+                new_pixel = s_center + normalize(pixel - s_center) * R_p
+                camera_ray_directions[i, j] = normalize(new_pixel - scene.camera.position)
+            else:
+                camera_ray_directions[i, j] = normalize(pixel - scene.camera.position)
 
             pixel += move_x
         P_0 += move_y
@@ -77,6 +101,7 @@ def main():
 
     img = render_img(scene, camera_ray_origins, camera_ray_directions)
     img = img.reshape(args.img_height, args.img_width, 3)
+    img[mask] = 0
 
     print(f'Render took {time.time() - start} seconds')
 

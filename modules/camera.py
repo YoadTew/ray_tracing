@@ -11,7 +11,7 @@ class Camera:
 
         self.fisheye = False
         if len(params) >= 12:
-            self.fisheye = bool(params[11])
+            self.fisheye = params[11] != 'false'
 
         self.fisheye_k = 0.5
         if len(params) >= 13:
