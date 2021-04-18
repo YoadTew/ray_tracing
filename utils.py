@@ -29,33 +29,22 @@ def render_img(scene, camera_ray_origins, camera_ray_directions):
 
     return img
 
-def find_intersection(scene, ray_origins, ray_directions, excluded_objects=None):
+def find_intersection(scene, ray_origins, ray_directions, excluded_objects=[]):
     min_t = np.full(ray_origins.shape[0], np.inf, dtype=float)
     nearest_objects = np.full(ray_origins.shape[0], -1, dtype=int)
 
-    if excluded_objects is not None:
-        for idx, entity in enumerate(scene.objects):
-            t, mask_inter = entity.intersection(ray_origins, ray_directions)
+    for idx, entity in enumerate(scene.objects):
+        t, mask_inter = entity.intersection(ray_origins, ray_directions)
 
-            for curr_exclude_object in excluded_objects:
-                mask_inter = np.logical_and(mask_inter, curr_exclude_object != idx)
+        for curr_exclude_object in excluded_objects:
+            mask_inter = np.logical_and(mask_inter, curr_exclude_object != idx)
 
-            new_t = np.copy(min_t)
-            new_t[mask_inter] = np.minimum(new_t[mask_inter], t[mask_inter])
-            changes = (new_t != min_t)
+        new_t = np.copy(min_t)
+        new_t[mask_inter] = np.minimum(new_t[mask_inter], t[mask_inter])
+        changes = (new_t != min_t)
 
-            nearest_objects[changes] = idx
-            min_t = new_t
-    else:
-        for idx, entity in enumerate(scene.objects):
-            t, mask_inter = entity.intersection(ray_origins, ray_directions)
-
-            new_t = np.copy(min_t)
-            new_t[mask_inter] = np.minimum(new_t[mask_inter], t[mask_inter])
-            changes = (new_t != min_t)
-
-            nearest_objects[changes] = idx
-            min_t = new_t
+        nearest_objects[changes] = idx
+        min_t = new_t
 
     return min_t, nearest_objects
 
@@ -92,8 +81,7 @@ def find_color(scene, t, nearest_objects, source_ray_origins, source_ray_directi
     # Reflection
     reflection_colors = np.full_like(diff_spec_colors, scene.settings.background_color, dtype=float)
 
-    if recursion_count < scene.settings.max_recursion and len(excluded_objects) <= 1:
-
+    if recursion_count < scene.settings.max_recursion:
         ref_directions = source_ray_directions - 2 * vector_dot(source_ray_directions, normals) * normals
         ref_t, ref_nearest_objects = find_intersection(scene, inter_points, ref_directions)
         mask_ref_inter = ref_nearest_objects >= 0
@@ -110,17 +98,13 @@ def find_color(scene, t, nearest_objects, source_ray_origins, source_ray_directi
     # Transperency
     transparecy_colors = np.full_like(diff_spec_colors, scene.settings.background_color, dtype=float)
 
-    if len(excluded_objects) > 0:
+    if recursion_count == 1:
         trans_t, trans_nearest_objects = find_intersection(scene,
                                                            source_ray_origins,
                                                            source_ray_directions,
                                                            excluded_objects=excluded_objects)
         mask_trans_inter = trans_nearest_objects >= 0
-
-        new_excluded = [trans_nearest_objects[mask_trans_inter]]
-
-        for curr_exclude in excluded_objects:
-            new_excluded.append(curr_exclude[mask_trans_inter])
+        new_excluded = [x[mask_trans_inter] for x in excluded_objects + [trans_nearest_objects]]
 
         if mask_trans_inter.any():
             transparecy_colors[mask_trans_inter] = find_color(scene,
@@ -128,6 +112,7 @@ def find_color(scene, t, nearest_objects, source_ray_origins, source_ray_directi
                                                               trans_nearest_objects[mask_trans_inter],
                                                               source_ray_origins[mask_trans_inter],
                                                               source_ray_directions[mask_trans_inter],
+                                                              recursion_count=recursion_count,
                                                               excluded_objects=new_excluded)
 
     colors = (np.expand_dims(transparencies, -1) * transparecy_colors) + \
