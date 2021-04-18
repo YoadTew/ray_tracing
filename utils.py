@@ -176,9 +176,13 @@ def is_soft_shadowed(light, inter_points, scene, normals):
         point = np.copy(P_0)
         for j in range(scene.settings.soft_shadow_N):
             idx = i * scene.settings.soft_shadow_N + j
-            ray_origins[:, idx] = inter_points + (normals * 1e-3)
             rand_point = point + np.random.uniform() * move_y + np.random.uniform() * move_x
+
+            ray_origins[:, idx] = inter_points + (normals * 1e-3)
             ray_directions[:, idx] = normalize(rand_point - inter_points + (normals * 1e-3))
+
+            # ray_origins[:, idx] = rand_point
+            # ray_directions[:, idx] = normalize(inter_points - rand_point)
 
             point += move_x
         P_0 += move_y
@@ -194,6 +198,8 @@ def is_soft_shadowed(light, inter_points, scene, normals):
                                    (nearest_objects >= 0)
                                ), axis=-1
                            )
+
+    # ray_hits = np.sum(np.abs(t - np.linalg.norm(np.expand_dims(inter_points, 1) - ray_origins, axis=-1)) < 1e-6, axis=-1)
 
     percent_hit = ray_hits / N_squared
 
