@@ -36,4 +36,4 @@ class Scene:
                 elif split_line[0] == 'lgt':
                     self.lights.append(Light(split_line[1:]))
 
-        self.objects = self.spheres + self.planes
+        self.objects = self.spheres + self.planes + self.boxes

@@ -20,12 +20,12 @@ class Sphere(Entity):
         d_squared = np.full(ray_origins.shape[0], None, dtype=float)
         d_squared[mask_inter] = np.sum(L[mask_inter] * L[mask_inter], axis=-1) - (t_ca[mask_inter] ** 2)
 
-        mask_inter = d_squared < self.radius_squared
+        mask_inter = np.logical_and(mask_inter, d_squared < self.radius_squared)
 
         t_hc = np.full(ray_origins.shape[0], None, dtype=float)
         t_hc[mask_inter] = np.sqrt(self.radius_squared - d_squared[mask_inter])
 
-        return np.minimum(t_ca - t_hc, t_ca + t_hc), mask_inter
+        return t_ca - t_hc, mask_inter
 
     def get_normal(self, point):
         normal = normalize(point - self.center)

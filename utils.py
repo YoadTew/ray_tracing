@@ -130,16 +130,18 @@ def calc_diffuse_specular_color(scene, inter_points, source_ray_directions, norm
         light_ray_directions = normalize(inter_points - light.position)
 
         ####### Diffuse color #######
+
         curr_diff_color = \
-            np.abs(vector_dot(normals, light_ray_directions)) * \
+            np.clip(-vector_dot(normals, light_ray_directions), 0, None) * \
             p_diff_colors * light.light_color
+        # np.abs(vector_dot(normals, light_ray_directions)) * \
 
         curr_diff_color *= ((1 - light.shadow_intensity) + light.shadow_intensity * np.expand_dims(light_ray_hits, -1))
 
         diff_colors += curr_diff_color
 
         ####### Specular color #######
-        R = 2 * vector_dot(light_ray_directions, normals) * normals- light_ray_directions
+        R = 2 * vector_dot(light_ray_directions, normals) * normals - light_ray_directions
 
         s1 = p_spec_colors
         s2 = np.power(vector_dot(R, -source_ray_directions), np.expand_dims(p_phong_coeffs, -1))
