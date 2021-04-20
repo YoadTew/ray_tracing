@@ -88,5 +88,3 @@ class Box(Entity):
         for plane in self.planes:
             if np.abs(point @ plane.normal - plane.offset) < 1e-5:
                 return plane.normal
-
-        print('here')
