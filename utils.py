@@ -174,14 +174,16 @@ def is_soft_shadowed(light, inter_points, scene, normals):
     ray_origins = np.zeros((ray_directions.shape[0], N_squared, 3), dtype=float)
     ray_directions = np.zeros((ray_directions.shape[0], N_squared, 3), dtype=float)
 
+    source = inter_points + (normals * 1e-3)
+
     for i in range(scene.settings.soft_shadow_N):
         point = np.copy(P_0)
         for j in range(scene.settings.soft_shadow_N):
             idx = i * scene.settings.soft_shadow_N + j
-            rand_point = point + np.random.uniform() * move_y + np.random.uniform() * move_x
+            rand_point = point + np.random.uniform(size=(move_y.shape[0], 1)) * move_y + np.random.uniform(size=(move_y.shape[0], 1)) * move_x
 
-            ray_origins[:, idx] = inter_points + (normals * 1e-3)
-            ray_directions[:, idx] = normalize(rand_point - inter_points + (normals * 1e-3))
+            ray_origins[:, idx] = source
+            ray_directions[:, idx] = normalize(rand_point - source)
 
             # ray_origins[:, idx] = rand_point
             # ray_directions[:, idx] = normalize(inter_points - rand_point)
